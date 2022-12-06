@@ -1,6 +1,9 @@
 import { Pool } from './deps.js';
 
 const CONCURRENT_CONNECTIONS = 20;
+let connectionPool;
+let sql;
+
 
 //const connectionPool = new Pool({}, CONCURRENT_CONNECTIONS);
 
@@ -30,5 +33,9 @@ const executeQuery = async (query, params) => {
   
     return response;
 };
+
+const getMessagesDB = async () => {
+
+}
   
 //export { executeQuery };

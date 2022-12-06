@@ -44,7 +44,7 @@ const createWebSocketConnection = async (request) => {
 const getMessages = async () => {
 
     const result = await sql`SELECT id, time, username, message, ARRAY_AGG( commenter  || '#comment#' || comment ) comments FROM messages LEFT OUTER JOIN comments ON id = message_id GROUP BY id ORDER BY time DESC  LIMIT 20`
-    console.log('messages: ', result);
+    
     const rows = result.map( (row) => {
 
     const comments = []
@@ -101,8 +101,8 @@ const addComment = async ({id, comment, user}) => {
 const handleRequest = async (request) => {
     const url = new URL(request.url);
 
-    console.log(url.pathname)
-    //return new Response("hello world", { status: 200});
+    //console.log(url.pathname)
+    
     if(url.pathname === "/connect") {
         return await createWebSocketConnection(request);
     } else if(request.method === "POST" && url.pathname === "/message") {
@@ -111,6 +111,7 @@ const handleRequest = async (request) => {
         // Update the view
         const rows = await addMessage(data);
         sockets.forEach( (socket) => socket.send(JSON.stringify(rows)));
+        return new Response('ADDED MESSAGE', { status: 201 })
     } else if (request.method === "POST" && url.pathname === "/comment") {
 
         const data = await request.json();
@@ -121,6 +122,7 @@ const handleRequest = async (request) => {
         // Update the view
         const rows = await getMessages();
         sockets.forEach( (socket) => socket.send(JSON.stringify(rows)));
+        return new Response('ADDED COMMENT', { status: 201 })
     }
 
     return new Response('DEFAULT', { status: 200 })
