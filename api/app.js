@@ -1,6 +1,19 @@
 import { serve } from "./deps.js";
-import { executeQuery } from './database.js';
+import postgres from "https://deno.land/x/postgresjs@v3.3.2/mod.js";
+//import { executeQuery } from './database.js';
 
+const PGPASS = Deno.env.get("PGPASS").trim();
+const PGPASS_PARTS = PGPASS.split(":");
+
+const host = PGPASS_PARTS[0];
+const port = PGPASS_PARTS[1];
+const database = PGPASS_PARTS[2];
+const username = PGPASS_PARTS[3];
+const password = PGPASS_PARTS[4];
+
+const sql = postgres({
+    host, port, database, username, password
+});
 
 const sockets = new Set();
 
@@ -29,11 +42,10 @@ const createWebSocketConnection = async (request) => {
 
 //Get 20 message from db
 const getMessages = async () => {
-    const result = await executeQuery(
-        "SELECT id, time, username, message, ARRAY_AGG( commenter  || '#comment#' || comment ) comments FROM messages LEFT OUTER JOIN comments ON id = message_id GROUP BY id ORDER BY time DESC  LIMIT 20"
-    )
-    
-    const rows = result.rows.map( (row) => {
+
+    const result = await sql`SELECT id, time, username, message, ARRAY_AGG( commenter  || '#comment#' || comment ) comments FROM messages LEFT OUTER JOIN comments ON id = message_id GROUP BY id ORDER BY time DESC  LIMIT 20`
+    console.log('messages: ', result);
+    const rows = result.map( (row) => {
 
     const comments = []
     row.comments.forEach( (comment) => {
@@ -59,16 +71,15 @@ const getMessages = async () => {
 
 // Adds new message to the db
 const addMessage = async ({user, message}) => {
-    
-    await executeQuery(
-        "INSERT INTO messages (username, time,  message) VALUES ($user, $time, $message);",
-        {
-            user,
-            time: new Date(),
-            message
-        }
-    );
+    const time = new Date();
 
+    await sql`
+        INSERT INTO messages
+        (username, time,  message)
+        VALUES
+        (${user}, ${time}, ${message})
+    `
+    
     const rows = await getMessages();
     
     return rows;
@@ -77,20 +88,20 @@ const addMessage = async ({user, message}) => {
 // Add new comment
 const addComment = async ({id, comment, user}) => {
 
-    await executeQuery(
-        "INSERT INTO comments (comment, message_id, commenter ) VALUES ($comment, $id, $user);", {
-            comment,
-            id,
-            user
-        }
-    );
+    await sql`
+        INSERT INTO comments
+        (comment, message_id, commenter )
+        VALUES
+        (${comment}, ${id}, ${user})
+    `
+
     return;
 }
 
 const handleRequest = async (request) => {
     const url = new URL(request.url);
 
-    //console.log(url.pathname)
+    console.log(url.pathname)
     //return new Response("hello world", { status: 200});
     if(url.pathname === "/connect") {
         return await createWebSocketConnection(request);

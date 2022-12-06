@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-ui-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-ui-app
+  template:
+    metadata:
+      labels:
+        app: chat-ui-app
+    spec:
+      containers:
+        - name: chat-ui-app
+          image: kub-chat-ui:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 7778

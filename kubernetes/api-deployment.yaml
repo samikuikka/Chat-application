@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-api-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-api-app
+  template:
+    metadata:
+      labels:
+        app: chat-api-app
+    spec:
+      containers:
+        - name: chat-api-app
+          image: kub-chat-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 7777
+          resources:
+            limits:
+              cpu: 1
+          env:
+            - name: PGPASS
+              valueFrom:
+                secretKeyRef:
+                  name: chat-db-cluster-app
+                  key: pgpass
+                  optional: false # stating that the secret "my-database-cluster-app" must exist

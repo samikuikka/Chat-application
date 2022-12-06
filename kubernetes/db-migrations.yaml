@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chat-db-migration-job
+spec:
+  template:
+    metadata:
+      name: chat-db-migration
+    spec:
+      containers:
+        - name: chat-flyway-migrations
+          image: chat-flyway-migrations:latest
+          imagePullPolicy: Never
+          env:
+            - name: FLYWAY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: chat-db-cluster-app
+                  key: username
+                  optional: false
+            - name: FLYWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chat-db-cluster-app
+                  key: password
+                  optional: false
+      # as its a migration job, we do not want to restart it
+      restartPolicy: Never
+  backoffLimit: 2

@@ -2,7 +2,7 @@ import { Pool } from './deps.js';
 
 const CONCURRENT_CONNECTIONS = 20;
 
-const connectionPool = new Pool({}, CONCURRENT_CONNECTIONS);
+//const connectionPool = new Pool({}, CONCURRENT_CONNECTIONS);
 
 const executeQuery = async (query, params) => {
     const response = {};
@@ -31,4 +31,4 @@ const executeQuery = async (query, params) => {
     return response;
 };
   
-export { executeQuery };
+//export { executeQuery };
