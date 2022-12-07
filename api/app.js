@@ -1,7 +1,7 @@
 import { serve } from "./deps.js";
 import postgres from "https://deno.land/x/postgresjs@v3.3.2/mod.js";
-//import { executeQuery } from './database.js';
 
+// Config
 const PGPASS = Deno.env.get("PGPASS").trim();
 const PGPASS_PARTS = PGPASS.split(":");
 
@@ -15,32 +15,40 @@ const sql = postgres({
     host, port, database, username, password
 });
 
+
 const sockets = new Set();
 
 // Creates web socket connection
 const createWebSocketConnection = async (request) => {
-    console.log('Crating WS connection...');
+    //console.log('Crating WS connection...');
     const { socket, response } = Deno.upgradeWebSocket(request);
 
+    // When connection is opened, we can send the messages to the client
     socket.onopen = async () => {
-        console.log('Conntection created');
         const rows = await getMessages()
-        socket.send(JSON.stringify(rows));
+        try {
+            socket.send(JSON.stringify(rows));
+        } catch (e) {
+            
+        }
     }
+
+    // For debugging
+    socket.onerror = (e) => {
+        //console.log('WS ERROR: ', e);
+    }
+
     socket.onmessage = (e) => console.log(`Received a message: ${e.data}`);
     socket.onclose = () => {
-        console.log('WS closed');
         sockets.delete(socket)
     }
-    socket.onerror = (e) => console.error('WS error', e);
-    socket.onclose = () => console.log('connection closed');
+    
 
     sockets.add(socket);
-    //console.log('1:', sockets)
     return response;
 }
 
-//Get 20 message from db
+//Get 20 most recent messages from db
 const getMessages = async () => {
 
     const result = await sql`SELECT id, time, username, message, ARRAY_AGG( commenter  || '#comment#' || comment ) comments FROM messages LEFT OUTER JOIN comments ON id = message_id GROUP BY id ORDER BY time DESC  LIMIT 20`
@@ -101,16 +109,29 @@ const addComment = async ({id, comment, user}) => {
 const handleRequest = async (request) => {
     const url = new URL(request.url);
 
-    //console.log(url.pathname)
     
     if(url.pathname === "/connect") {
         return await createWebSocketConnection(request);
     } else if(request.method === "POST" && url.pathname === "/message") {
         const data = await request.json();
-        
+  
+        sockets.forEach( socket => {
+            if(socket.readyState === 3) {
+                sockets.delete(socket);
+            }
+        })
         // Update the view
         const rows = await addMessage(data);
-        sockets.forEach( (socket) => socket.send(JSON.stringify(rows)));
+        sockets.forEach( (socket) => {
+
+            if(socket.readyState == 1) {
+                try {
+                    socket.send(JSON.stringify(rows))
+                } catch (e) {
+                }
+                
+            }
+        });
         return new Response('ADDED MESSAGE', { status: 201 })
     } else if (request.method === "POST" && url.pathname === "/comment") {
 
@@ -121,7 +142,16 @@ const handleRequest = async (request) => {
 
         // Update the view
         const rows = await getMessages();
-        sockets.forEach( (socket) => socket.send(JSON.stringify(rows)));
+        sockets.forEach( (socket) => {
+            
+            if(socket.readyState == 1) {
+                try {
+                    socket.send(JSON.stringify(rows))
+                } catch (e) {
+                    
+                }
+            }
+        });
         return new Response('ADDED COMMENT', { status: 201 })
     }
 
