@@ -1,7 +1,8 @@
 # Chat application
 
-Fullstack chat application, with load balancing and scaling with Kubernetes.
-WebSocket implementation between frontend and backend
+Fullstack chat application (sending messages and seeing comments on messages), with load balancing and scaling with Kubernetes.
+WebSocket implementation between frontend and backend.
+
 
 ## Tech stack
 
